@@ -281,8 +281,9 @@
      * landscape. In this case the image must be rotated in order to appear
      * correctly.
      */
-    BOOL isIPad = [[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad;
-    if (UIInterfaceOrientationIsLandscape(orientation) && !isIPad)
+    CDV_iOSDevice device = [self getCurrentDevice];
+    BOOL isIPadOrIPhone6Plus = device.iPad || device.iPhone6Plus;
+    if (UIInterfaceOrientationIsLandscape(orientation) && !isIPadOrIPhone6Plus)
     {
         imgTransform = CGAffineTransformMakeRotation(M_PI / 2);
         imgBounds.size = CGSizeMake(imgBounds.size.height, imgBounds.size.width);
