@@ -24,6 +24,7 @@
 
 #define kSplashScreenDurationDefault 3000.0f
 
+#define kSplashScreenColor = 202.0f;
 
 @implementation CDVSplashScreen
 
@@ -76,7 +77,7 @@
     BOOL autorotateValue = (device.iPad || device.iPhone6Plus) ?
         [(CDVViewController *)self.viewController shouldAutorotateDefaultValue] :
         NO;
-    
+
     [(CDVViewController *)self.viewController setEnabledAutorotation:autorotateValue];
 
     NSString* topActivityIndicator = [self.commandDelegate.settings objectForKey:[@"TopActivityIndicator" lowercaseString]];
@@ -136,7 +137,6 @@
     [_activityView removeFromSuperview];
     _imageView = nil;
     _activityView = nil;
-    _curImageName = nil;
 
     self.viewController.view.userInteractionEnabled = YES;  // re-enable user interaction upon completion
     [self.viewController.view removeObserver:self forKeyPath:@"frame"];
@@ -146,13 +146,13 @@
 - (CDV_iOSDevice) getCurrentDevice
 {
     CDV_iOSDevice device;
-    
+
     UIScreen* mainScreen = [UIScreen mainScreen];
     CGFloat mainScreenHeight = mainScreen.bounds.size.height;
     CGFloat mainScreenWidth = mainScreen.bounds.size.width;
-    
+
     int limit = MAX(mainScreenHeight,mainScreenWidth);
-    
+
     device.iPad = (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad);
     device.iPhone = (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone);
     device.retina = ([mainScreen scale] == 2.0);
@@ -162,98 +162,36 @@
     // this is appropriate for detecting the runtime screen environment
     device.iPhone6 = (device.iPhone && limit == 667.0);
     device.iPhone6Plus = (device.iPhone && limit == 736.0);
-    
+
     return device;
 }
 
-- (NSString*)getImageName:(UIInterfaceOrientation)currentOrientation delegate:(id<CDVScreenOrientationDelegate>)orientationDelegate device:(CDV_iOSDevice)device
-{
-    // Use UILaunchImageFile if specified in plist.  Otherwise, use Default.
-    NSString* imageName = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"UILaunchImageFile"];
-    
-    NSUInteger supportedOrientations = [orientationDelegate supportedInterfaceOrientations];
-    
-    // Checks to see if the developer has locked the orientation to use only one of Portrait or Landscape
-    BOOL supportsLandscape = (supportedOrientations & UIInterfaceOrientationMaskLandscape);
-    BOOL supportsPortrait = (supportedOrientations & UIInterfaceOrientationMaskPortrait || supportedOrientations & UIInterfaceOrientationMaskPortraitUpsideDown);
-    // this means there are no mixed orientations in there
-    BOOL isOrientationLocked = !(supportsPortrait && supportsLandscape);
-    
-    if (imageName)
-    {
-        imageName = [imageName stringByDeletingPathExtension];
-    }
-    else
-    {
-        imageName = @"Default";
-    }
-    
-    if (device.iPhone5)
-    { // does not support landscape
-        imageName = [imageName stringByAppendingString:@"-568h"];
-    }
-    else if (device.iPhone6)
-    { // does not support landscape
-        imageName = [imageName stringByAppendingString:@"-667h"];
-    }
-    else if (device.iPhone6Plus)
-    { // supports landscape
-        if (isOrientationLocked)
-        {
-            imageName = [imageName stringByAppendingString:(supportsLandscape ? @"-Landscape" : @"")];
-        }
-        else
-        {
-            switch (currentOrientation)
-            {
-                case UIInterfaceOrientationLandscapeLeft:
-                case UIInterfaceOrientationLandscapeRight:
-                        imageName = [imageName stringByAppendingString:@"-Landscape"];
-                    break;
-                default:
-                    break;
-            }
-        }
-        imageName = [imageName stringByAppendingString:@"-736h"];
++ (UIImage *)imageWithColor:(UIColor *)color {
+    CGRect rect = CGRectMake(0.0f, 0.0f, 1.0f, 1.0f);
+    UIGraphicsBeginImageContext(rect.size);
+    CGContextRef context = UIGraphicsGetCurrentContext();
 
-    }
-    else if (device.iPad)
-    {   // supports landscape
-        if (isOrientationLocked)
-        {
-            imageName = [imageName stringByAppendingString:(supportsLandscape ? @"-Landscape" : @"-Portrait")];
-        }
-        else
-        {
-            switch (currentOrientation)
-            {
-                case UIInterfaceOrientationLandscapeLeft:
-                case UIInterfaceOrientationLandscapeRight:
-                    imageName = [imageName stringByAppendingString:@"-Landscape"];
-                    break;
-                    
-                case UIInterfaceOrientationPortrait:
-                case UIInterfaceOrientationPortraitUpsideDown:
-                default:
-                    imageName = [imageName stringByAppendingString:@"-Portrait"];
-                    break;
-            }
-        }
-    }
-    
-    return imageName;
+    CGContextSetFillColorWithColor(context, [color CGColor]);
+    CGContextFillRect(context, rect);
+
+    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+
+    return image;
 }
 
 // Sets the view's frame and image.
 - (void)updateImage
 {
-    NSString* imageName = [self getImageName:[[UIApplication sharedApplication] statusBarOrientation] delegate:(id<CDVScreenOrientationDelegate>)self.viewController device:[self getCurrentDevice]];
 
-    if (![imageName isEqualToString:_curImageName])
+    if (!_imageView.image)
     {
-        UIImage* img = [UIImage imageNamed:imageName];
-        _imageView.image = img;
-        _curImageName = imageName;
+        UIColor* color = [UIColor colorWithRed:kSplashScreenColor/255.0
+                                         green:kSplashScreenColor/255.0
+                                          blue:kSplashScreenColor/255.0
+                                         alpha:1.0];
+        UIImage* image = [CDVSplashScreen imageWithColor:color];
+        _imageView.image = image;
     }
 
     // Check that splash screen's image exists before updating bounds
@@ -263,7 +201,7 @@
     }
     else
     {
-        NSLog(@"WARNING: The splashscreen image named %@ was not found", imageName);
+        NSLog(@"WARNING: For some reason, we couldn't make a splash image from a color");
     }
 }
 
@@ -342,7 +280,7 @@
             // they mean 10 seconds, and not the meaningless 10ms
             fadeDuration *= 1000;
         }
-        
+
         if (_visible)
         {
             if (_imageView == nil)
