@@ -24,7 +24,7 @@
 
 #define kSplashScreenDurationDefault 3000.0f
 
-#define kSplashScreenColor = 202.0f;
+#define kSplashScreenColor 202.0f
 
 @implementation CDVSplashScreen
 
